@@ -73,5 +73,7 @@ def custom_message(code):
             return render_template("sent.html", code=code, message=f"Mesej khas dihantar (Custom message sent): {text}")
     return render_template("custom.html", code=code, user=user)
 
+import os
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

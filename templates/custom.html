@@ -1,0 +1,30 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Custom Message - PingKereta</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="topbar">
+        <a href="/s/{{ code }}">← Kembali (Back)</a>
+        <strong>PingKereta</strong>
+      </div>
+
+      <h2>Tulis mesej sendiri (Write your own message)</h2>
+      <p class="muted">Sesuai untuk situasi khas. (Useful for special situations.)</p>
+
+      <form method="POST">
+        <label>Mesej (Message)</label>
+        <textarea name="message" placeholder="Contoh / Example: Saya terlanggar bumper belakang anda. Sila hubungi saya."></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit">Hantar mesej (Send message)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

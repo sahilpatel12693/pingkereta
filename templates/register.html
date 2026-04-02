@@ -1,0 +1,59 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Register - PingKereta</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <a href="/">← Kembali (Back)</a>
+      <strong>PingKereta</strong>
+    </div>
+
+    <div class="card">
+      <div class="brand">
+        <div class="logo">📝</div>
+        <div>
+          <h2>Daftar sticker demo (Register demo sticker)</h2>
+          <div class="muted">Isi maklumat di bawah untuk cipta sticker demo anda.<br>(Fill in the details below to create your demo sticker.)</div>
+        </div>
+      </div>
+
+      <form method="POST">
+        <div class="form-grid">
+          <div>
+            <label>Nama pemilik (Owner name)</label>
+            <input name="name" placeholder="Contoh / Example: Sahil" required>
+          </div>
+          <div>
+            <label>Nombor plat (Plate number)</label>
+            <input name="plate" placeholder="Contoh / Example: JXX1234" required>
+          </div>
+          <div>
+            <label>Jenis notifikasi (Notification type)</label>
+            <select name="notif">
+              <option>Telegram</option>
+              <option>Email</option>
+              <option>WhatsApp (Later)</option>
+            </select>
+          </div>
+          <div>
+            <label>Butiran notifikasi (Private contact)</label>
+            <input name="contact" placeholder="Contoh / Example: your_telegram_or_email" required>
+          </div>
+        </div>
+
+        <div class="notice small">
+          Maklumat ini hanya untuk demo tempatan dan tidak dipaparkan pada halaman sticker.
+          <br>(This information is only for local demo and is not shown on the sticker page.)
+        </div>
+
+        <button class="btn btn-primary" type="submit">Cipta sticker (Create sticker)</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

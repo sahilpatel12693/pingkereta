@@ -1,0 +1,51 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sticker - PingKereta</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="panel center">
+      <div class="brand" style="justify-content:center">
+        <div class="logo">🚗</div>
+        <div>
+          <h2>PingKereta</h2>
+          <div class="muted">Maklumat pemilik tidak dipaparkan<br>(Owner information is not displayed)</div>
+        </div>
+      </div>
+
+      <div class="badge">Plat / Plate: {{ user.plate }}</div>
+
+      <div class="quick-grid">
+        <a class="quick block" href="/send/{{ code }}/block">
+          <div class="emoji">🚗</div>
+          <strong>Kereta anda menghalang saya</strong><br>
+          <span class="muted">(Your car is blocking me)</span>
+        </a>
+        <a class="quick light" href="/send/{{ code }}/light">
+          <div class="emoji">💡</div>
+          <strong>Lampu kereta masih ON</strong><br>
+          <span class="muted">(Your car lights are still ON)</span>
+        </a>
+        <a class="quick emergency" href="/send/{{ code }}/emergency">
+          <div class="emoji">🚨</div>
+          <strong>Sila datang segera</strong><br>
+          <span class="muted">(Please come immediately)</span>
+        </a>
+        <a class="quick issue" href="/send/{{ code }}/issue">
+          <div class="emoji">⚠️</div>
+          <strong>Ada masalah pada kereta</strong><br>
+          <span class="muted">(There is an issue with the car)</span>
+        </a>
+      </div>
+
+      <div class="actions" style="justify-content:center; margin-top:20px;">
+        <a class="btn btn-dark" href="/custom/{{ code }}">Tulis mesej sendiri (Write custom message)</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

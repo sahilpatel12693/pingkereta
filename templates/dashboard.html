@@ -1,0 +1,61 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard - PingKereta</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <a href="/">← Home</a>
+      <strong>Dashboard owner (Owner dashboard)</strong>
+    </div>
+
+    <div class="card">
+      <div class="brand">
+        <div class="logo">📋</div>
+        <div>
+          <h2>Sticker berjaya dicipta (Sticker created successfully)</h2>
+          <div class="muted">Gunakan link ini untuk QR code anda.<br>(Use this link for your QR code.)</div>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="box">
+          <div class="muted small">Kod sticker (Sticker ID)</div>
+          <strong>{{ code }}</strong>
+        </div>
+        <div class="box">
+          <div class="muted small">Nama (Name)</div>
+          <strong>{{ user.name }}</strong>
+        </div>
+        <div class="box">
+          <div class="muted small">Plat (Plate)</div>
+          <strong>{{ user.plate }}</strong>
+        </div>
+      </div>
+
+      <div class="notice">
+        <strong>QR link</strong><br>
+        http://127.0.0.1:5000/s/{{ code }}
+      </div>
+
+      <div class="actions">
+        <a class="btn btn-primary" href="/s/{{ code }}">Buka halaman sticker (Open sticker page)</a>
+        <a class="btn btn-dark" href="/">Cipta lagi (Create another)</a>
+      </div>
+
+      <h3 style="margin-top:22px">Mesej terbaru (Latest messages)</h3>
+      {% if user.messages %}
+        {% for msg in user.messages %}
+          <div class="msg">{{ msg }}</div>
+        {% endfor %}
+      {% else %}
+        <div class="msg muted">Belum ada mesej lagi. (No messages yet.)</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

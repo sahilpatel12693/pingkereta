@@ -1,0 +1,63 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PingKereta</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div><strong>PingKereta</strong></div>
+      <a href="/register">Daftar / Register</a>
+    </div>
+
+    <div class="hero">
+      <div class="card">
+        <div class="brand">
+          <div class="logo">🚗</div>
+          <div>
+            <h1>PingKereta</h1>
+            <div class="muted">Mudah • Selamat • Tanpa nombor telefon<br>(Easy • Safe • No phone number)</div>
+          </div>
+        </div>
+
+        <h2>Hubungi pemilik kereta dengan cepat<br>(Contact car owner quickly)</h2>
+        <p class="muted">
+          QR sticker untuk hubungi pemilik kereta tanpa tunjuk nombor telefon.
+          <br>(QR sticker to contact car owner without showing phone number.)
+        </p>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="/register">Cipta sticker demo (Create demo sticker)</a>
+          <a class="btn btn-dark" href="#features">Lihat ciri (See features)</a>
+        </div>
+      </div>
+
+      <div class="card center">
+        <div class="badge">Live Demo Style</div>
+        <div style="font-size:84px">📱</div>
+        <h3>1 Scan → 1 Tap → Message Sent</h3>
+        <p class="muted">
+          Sesuai untuk parking, lampu ON, kecemasan.
+          <br>(Useful for parking, lights ON, emergency.)
+        </p>
+      </div>
+    </div>
+
+    <div id="features" class="grid-2">
+      <div class="feature card">
+        <div class="badge">Privasi / Privacy</div>
+        <h3>Tiada nombor dipaparkan<br>(No number shown)</h3>
+        <p class="muted">Pihak yang scan hanya nampak butang tindakan, bukan maklumat pemilik.</p>
+      </div>
+      <div class="feature card">
+        <div class="badge">Pantas / Fast</div>
+        <h3>Satu tap terus hantar<br>(One tap to send)</h3>
+        <p class="muted">Sangat mudah untuk orang awam guna tanpa perlu isi borang panjang.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

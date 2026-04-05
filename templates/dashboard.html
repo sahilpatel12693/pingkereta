@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html>
 <head>
@@ -41,7 +40,7 @@
         <strong>QR link</strong><br>
         https://pingkereta-my.onrender.com/s/{{ code }}
         <br><br>
-<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://pingkereta-my.onrender.com/s/{{ code }}">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://pingkereta-my.onrender.com/s/{{ code }}">
       </div>
 
       <div class="actions">
@@ -50,9 +49,12 @@
       </div>
 
       <h3 style="margin-top:22px">Mesej terbaru (Latest messages)</h3>
-      {% if user.messages %}
-        {% for msg in user.messages %}
-          <div class="msg">{{ msg }}</div>
+      {% if messages %}
+        {% for item in messages %}
+          <div class="msg">
+            <strong>{{ item["message"] }}</strong><br>
+            <span class="muted small">{{ item["created_at"] }}</span>
+          </div>
         {% endfor %}
       {% else %}
         <div class="msg muted">Belum ada mesej lagi. (No messages yet.)</div>

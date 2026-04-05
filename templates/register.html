@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html>
 <head>
@@ -9,49 +8,29 @@
 <body>
   <div class="container">
     <div class="topbar">
-      <a href="/">← Kembali (Back)</a>
-      <strong>PingKereta</strong>
+      <a href="/">← Home</a>
+      <strong>Daftar / Register</strong>
     </div>
 
     <div class="card">
-      <div class="brand">
-        <div class="logo">📝</div>
-        <div>
-          <h2>Daftar sticker demo (Register demo sticker)</h2>
-          <div class="muted">Isi maklumat di bawah untuk cipta sticker demo anda.<br>(Fill in the details below to create your demo sticker.)</div>
-        </div>
-      </div>
+      <h2>Daftar sticker anda (Register your sticker)</h2>
 
-      <form method="POST">
-        <div class="form-grid">
-          <div>
-            <label>Nama pemilik (Owner name)</label>
-            <input name="name" placeholder="Contoh / Example: Sahil" required>
-          </div>
-          <div>
-            <label>Nombor plat (Plate number)</label>
-            <input name="plate" placeholder="Contoh / Example: JXX1234" required>
-          </div>
-          <div>
-            <label>Jenis notifikasi (Notification type)</label>
-            <select name="notif">
-              <option>Telegram</option>
-              <option>Email</option>
-              <option>WhatsApp (Later)</option>
-            </select>
-          </div>
-          <div>
-            <label>Butiran notifikasi (Private contact)</label>
-            <input name="contact" placeholder="Contoh / Example: your_telegram_or_email" required>
-          </div>
-        </div>
+      <form method="post">
+        <label>Nama (Name)</label>
+        <input type="text" name="name" required>
 
-        <div class="notice small">
-          Maklumat ini hanya untuk demo tempatan dan tidak dipaparkan pada halaman sticker.
-          <br>(This information is only for local demo and is not shown on the sticker page.)
-        </div>
+        <label>Telegram Chat ID (ID Chat Telegram)</label>
+        <input type="text" name="contact" required placeholder="Masukkan Telegram Chat ID anda">
+        <small class="muted">Mulakan bot PingKereta dahulu, kemudian tampal Telegram Chat ID anda.</small>
 
-        <button class="btn btn-primary" type="submit">Cipta sticker (Create sticker)</button>
+        <label>Plat nombor (Plate number)</label>
+        <input type="text" name="plate" required>
+
+        <input type="hidden" name="notif" value="Telegram">
+
+        <div class="actions" style="margin-top:20px;">
+          <button class="btn btn-primary" type="submit">Daftar / Register</button>
+        </div>
       </form>
     </div>
   </div>

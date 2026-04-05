@@ -3,6 +3,7 @@ import uuid
 import requests
 import os
 import sqlite3
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -30,6 +31,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS owners (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE,
+            owner_token TEXT UNIQUE,
             name TEXT,
             contact TEXT,
             plate TEXT,
@@ -40,8 +42,9 @@ def init_db():
         CREATE TABLE IF NOT EXISTS alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             owner_id INTEGER,
+            message_type TEXT,
             message TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TEXT,
             FOREIGN KEY(owner_id) REFERENCES owners(id)
         )
     """)
@@ -84,13 +87,15 @@ def register():
         notif = request.form.get("notif", "Telegram").strip()
 
         code = str(uuid.uuid4())[:8].upper()
+        owner_token = str(uuid.uuid4())
 
         db = get_db()
         db.execute("""
-            INSERT INTO owners (code, name, contact, plate, notif)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO owners (code, owner_token, name, contact, plate, notif)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (
             code,
+            owner_token,
             name or "Owner",
             contact or "-",
             plate or "-",
@@ -121,6 +126,24 @@ def dashboard(code):
     return render_template("dashboard.html", code=code, user=user, messages=messages)
 
 
+@app.route("/owner/<owner_token>")
+def owner_dashboard(owner_token):
+    db = get_db()
+    user = db.execute("SELECT * FROM owners WHERE owner_token = ?", (owner_token,)).fetchone()
+
+    if not user:
+        return "Owner dashboard not found", 404
+
+    messages = db.execute("""
+        SELECT message, created_at
+        FROM alerts
+        WHERE owner_id = ?
+        ORDER BY id DESC
+    """, (user["id"],)).fetchall()
+
+    return render_template("dashboard.html", code=user["code"], user=user, messages=messages)
+
+
 @app.route("/s/<code>")
 def sticker(code):
     db = get_db()
@@ -149,18 +172,40 @@ def send_message(code, msg):
 
     message = messages_map.get(msg, "Unknown message")
 
+    recent = db.execute("""
+        SELECT created_at
+        FROM alerts
+        WHERE owner_id = ? AND message_type = ?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (user["id"], msg)).fetchone()
+
+    now = datetime.utcnow().isoformat()
+
+    if recent and recent["created_at"]:
+        try:
+            last_time = datetime.fromisoformat(recent["created_at"])
+            if datetime.utcnow() - last_time < timedelta(minutes=2):
+                return render_template(
+                    "sent.html",
+                    code=code,
+                    message="Alert recently sent. Please wait 2 minutes before sending again."
+                )
+        except ValueError:
+            pass
+
     db.execute("""
-        INSERT INTO alerts (owner_id, message)
-        VALUES (?, ?)
-    """, (user["id"], message))
+        INSERT INTO alerts (owner_id, message_type, message, created_at)
+        VALUES (?, ?, ?, ?)
+    """, (user["id"], msg, message, now))
     db.commit()
 
-    chat_id = user["contact"].strip()
-
+    chat_id = (user["contact"] or "").strip()
     telegram_text = (
         f"🚗 PingKereta Alert\n\n"
         f"Plate: {user['plate']}\n"
-        f"Message: {message}"
+        f"Message: {message}\n"
+        f"Time: {now}"
     )
 
     ok, result = send_telegram(chat_id, telegram_text)
@@ -183,19 +228,42 @@ def custom_message(code):
     if request.method == "POST":
         text = request.form.get("message", "").strip()
         if text:
+            recent = db.execute("""
+                SELECT created_at
+                FROM alerts
+                WHERE owner_id = ? AND message_type = ?
+                ORDER BY id DESC
+                LIMIT 1
+            """, (user["id"], "custom")).fetchone()
+
+            now = datetime.utcnow().isoformat()
+
+            if recent and recent["created_at"]:
+                try:
+                    last_time = datetime.fromisoformat(recent["created_at"])
+                    if datetime.utcnow() - last_time < timedelta(minutes=2):
+                        return render_template(
+                            "sent.html",
+                            code=code,
+                            message="Custom alert recently sent. Please wait 2 minutes before sending again."
+                        )
+                except ValueError:
+                    pass
+
             final_message = f"Mesej khas (Custom message): {text}"
 
             db.execute("""
-                INSERT INTO alerts (owner_id, message)
-                VALUES (?, ?)
-            """, (user["id"], final_message))
+                INSERT INTO alerts (owner_id, message_type, message, created_at)
+                VALUES (?, ?, ?, ?)
+            """, (user["id"], "custom", final_message, now))
             db.commit()
 
-            chat_id = user["contact"].strip()
+            chat_id = (user["contact"] or "").strip()
             telegram_text = (
                 f"🚗 PingKereta Alert\n\n"
                 f"Plate: {user['plate']}\n"
-                f"Message: {final_message}"
+                f"Message: {final_message}\n"
+                f"Time: {now}"
             )
             send_telegram(chat_id, telegram_text)
 

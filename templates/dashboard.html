@@ -37,10 +37,19 @@
       </div>
 
       <div class="notice">
-        <strong>QR link</strong><br>
-        https://pingkereta-my.onrender.com/s/{{ code }}
+        <strong>Public QR link</strong><br>
+        <input id="qrLink" type="text" value="https://pingkereta-my.onrender.com/s/{{ code }}" readonly style="width:100%;padding:10px;margin-top:8px;">
+        <br><br>
+        <button class="btn btn-primary" onclick="copyQrLink()">Copy QR Link</button>
         <br><br>
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://pingkereta-my.onrender.com/s/{{ code }}">
+      </div>
+
+      <div class="notice" style="margin-top:20px;">
+        <strong>Private owner dashboard link</strong><br>
+        <input id="ownerLink" type="text" value="https://pingkereta-my.onrender.com/owner/{{ user.owner_token }}" readonly style="width:100%;padding:10px;margin-top:8px;">
+        <br><br>
+        <button class="btn btn-dark" onclick="copyOwnerLink()">Copy Owner Link</button>
       </div>
 
       <div class="actions">
@@ -61,5 +70,21 @@
       {% endif %}
     </div>
   </div>
+
+  <script>
+    function copyQrLink() {
+      const text = document.getElementById("qrLink").value;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("QR link copied");
+      });
+    }
+
+    function copyOwnerLink() {
+      const text = document.getElementById("ownerLink").value;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Owner dashboard link copied");
+      });
+    }
+  </script>
 </body>
 </html>

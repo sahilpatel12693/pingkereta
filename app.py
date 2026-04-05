@@ -341,6 +341,7 @@ def telegram_sync():
         chat = message.get("chat", {})
         chat_id = str(chat.get("id", ""))
 
+        # 🔥 Detect /start TOKEN
         if text.startswith("/start"):
             parts = text.split()
 
@@ -352,6 +353,7 @@ def telegram_sync():
                     (owner_token,)
                 ).fetchone()
 
+                # 🔥 IMPORTANT FIX → always update (no condition)
                 if owner:
                     db.execute("""
                         UPDATE owners
@@ -359,18 +361,19 @@ def telegram_sync():
                         WHERE owner_token = ?
                     """, (chat_id, owner_token))
                     db.commit()
+
                     linked_count += 1
 
+                    # send confirmation
                     send_telegram(
                         chat_id,
-                        "✅ PingKereta connected successfully!\nYou will now receive car alerts on Telegram."
+                        "✅ PingKereta connected successfully!"
                     )
 
     return {
         "status": "ok",
         "linked_count": linked_count
     }
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

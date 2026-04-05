@@ -178,15 +178,53 @@ def owner_dashboard(owner_token):
 @app.route("/s/<code>")
 def sticker(code):
     db = get_db()
-    user = db.execute(
-        "SELECT * FROM owners WHERE code = ?",
-        (code,)
-    ).fetchone()
+    cur = db.cursor()
 
+    cur.execute("SELECT * FROM owners WHERE code = %s", (code,))
+    user = fetchone_dict(cur)
+    cur.close()
+
+    # If sticker not registered yet, show activation page
     if not user:
-        return "Sticker not found", 404
+        return render_template("register_by_qr.html", code=code)
 
+    # If already registered, show normal scanner page
     return render_template("sticker_page.html", code=code, user=user)
+
+@app.route("/register/<code>", methods=["POST"])
+def register_by_qr(code):
+    name = request.form.get("name", "").strip()
+    plate = request.form.get("plate", "").strip()
+
+    owner_token = str(uuid.uuid4())
+
+    db = get_db()
+    cur = db.cursor()
+
+    # Check if already registered
+    cur.execute("SELECT * FROM owners WHERE code = %s", (code,))
+    existing = cur.fetchone()
+
+    if existing:
+        cur.close()
+        return "This sticker is already registered.", 400
+
+    cur.execute("""
+        INSERT INTO owners (code, owner_token, name, contact, plate, notif)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (
+        code,
+        owner_token,
+        name or "Owner",
+        "",
+        plate or "-",
+        "Telegram"
+    ))
+
+    db.commit()
+    cur.close()
+
+    return redirect(url_for("dashboard", code=code))
 
 
 @app.route("/send/<code>/<msg>")

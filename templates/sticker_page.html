@@ -1,36 +1,266 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>PingKereta Sticker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PingKereta</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .scanner-wrap {
+      max-width: 520px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .scanner-card {
+      background: rgba(255,255,255,0.96);
+      border-radius: 28px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+
+    .scanner-head {
+      padding: 28px 24px 18px;
+      background: linear-gradient(135deg, #0b1736 0%, #132a5a 100%);
+      color: #fff;
+      text-align: center;
+    }
+
+    .scanner-badge {
+      width: 72px;
+      height: 72px;
+      border-radius: 22px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      background: linear-gradient(135deg, #ffb11b, #ff8c00);
+      box-shadow: 0 10px 25px rgba(255, 177, 27, 0.35);
+    }
+
+    .scanner-head h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.15;
+      font-weight: 800;
+    }
+
+    .scanner-head p {
+      margin: 10px auto 0;
+      max-width: 360px;
+      font-size: 15px;
+      line-height: 1.45;
+      color: rgba(255,255,255,0.88);
+    }
+
+    .scanner-body {
+      padding: 22px;
+    }
+
+    .plate-box {
+      background: linear-gradient(135deg, #edf8f3, #eaf2ff);
+      border: 1px solid #d6e3f7;
+      border-radius: 18px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+
+    .plate-label {
+      font-size: 13px;
+      color: #5a6b85;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .plate-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0c1d3f;
+      letter-spacing: 1px;
+    }
+
+    .help-box {
+      background: #fff8e8;
+      border: 1px solid #ffe2a8;
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #5f4a17;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      border-radius: 18px;
+      padding: 16px 18px;
+      font-weight: 700;
+      font-size: 16px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    }
+
+    .action-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+
+    .action-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.22);
+    }
+
+    .action-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+    }
+
+    .action-text small {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    .btn-block {
+      background: linear-gradient(135deg, #ff7b72, #ff4d4f);
+      color: #fff;
+    }
+
+    .btn-light {
+      background: linear-gradient(135deg, #ffd86f, #ffb020);
+      color: #1a1a1a;
+    }
+
+    .btn-emergency {
+      background: linear-gradient(135deg, #ff8a80, #ff3d71);
+      color: #fff;
+    }
+
+    .btn-issue {
+      background: linear-gradient(135deg, #273c75, #192a56);
+      color: #fff;
+    }
+
+    .btn-custom {
+      background: linear-gradient(135deg, #28c76f, #00a86b);
+      color: #fff;
+    }
+
+    .scanner-footer {
+      text-align: center;
+      padding: 16px 22px 24px;
+      font-size: 12px;
+      color: #73819a;
+    }
+
+    @media (max-width: 600px) {
+      .scanner-wrap {
+        margin: 18px auto;
+        padding: 12px;
+      }
+
+      .scanner-head h1 {
+        font-size: 25px;
+      }
+
+      .plate-value {
+        font-size: 24px;
+      }
+
+      .action-btn {
+        padding: 14px 14px;
+        font-size: 15px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <a href="/">← Home</a>
-      <strong>PingKereta</strong>
-    </div>
+  <div class="scanner-wrap">
+    <div class="scanner-card">
+      <div class="scanner-head">
+        <div class="scanner-badge">🚗</div>
+        <h1>PingKereta</h1>
+        <p>
+          Hubungi pemilik kereta tanpa nombor telefon.<br>
+          Contact the car owner without showing a phone number.
+        </p>
+      </div>
 
-    <div class="card">
-      <div class="brand">
-        <div class="logo">🚗</div>
-        <div>
-          <h2>Hubungi pemilik kereta tanpa nombor telefon</h2>
-          <div class="muted">Contact the car owner without showing a phone number</div>
+      <div class="scanner-body">
+        <div class="plate-box">
+          <div class="plate-label">Plat / Plate</div>
+          <div class="plate-value">{{ user.plate }}</div>
+        </div>
+
+        <div class="help-box">
+          Pilih sebab di bawah untuk hantar notifikasi kepada pemilik kereta.<br>
+          Choose a reason below to send a notification to the car owner.
+        </div>
+
+        <div class="action-list">
+          <a class="action-btn btn-block" href="/send/{{ code }}/block">
+            <div class="action-icon">🚫</div>
+            <div class="action-text">
+              Kereta anda menghalang saya
+              <small>Your car is blocking me</small>
+            </div>
+          </a>
+
+          <a class="action-btn btn-light" href="/send/{{ code }}/light">
+            <div class="action-icon">💡</div>
+            <div class="action-text">
+              Lampu kereta masih ON
+              <small>Your car lights are still ON</small>
+            </div>
+          </a>
+
+          <a class="action-btn btn-emergency" href="/send/{{ code }}/emergency">
+            <div class="action-icon">⚠️</div>
+            <div class="action-text">
+              Sila datang segera
+              <small>Please come immediately</small>
+            </div>
+          </a>
+
+          <a class="action-btn btn-issue" href="/send/{{ code }}/issue">
+            <div class="action-icon">🛠️</div>
+            <div class="action-text">
+              Ada masalah pada kereta
+              <small>There is an issue with the car</small>
+            </div>
+          </a>
+
+          <a class="action-btn btn-custom" href="/custom/{{ code }}">
+            <div class="action-icon">✍️</div>
+            <div class="action-text">
+              Hantar mesej khas
+              <small>Send a custom message</small>
+            </div>
+          </a>
         </div>
       </div>
 
-      <div class="notice">
-        <strong>Plat / Plate:</strong> {{ user.plate }}
-      </div>
-
-      <div class="actions" style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
-        <a class="btn btn-danger" href="/send/{{ code }}/block">🚫 Kereta anda menghalang saya</a>
-        <a class="btn btn-warning" href="/send/{{ code }}/light">💡 Lampu kereta masih ON</a>
-        <a class="btn btn-danger" href="/send/{{ code }}/emergency">⚠️ Sila datang segera</a>
-        <a class="btn btn-dark" href="/send/{{ code }}/issue">🛠️ Ada masalah pada kereta</a>
-        <a class="btn btn-primary" href="/custom/{{ code }}">✍️ Mesej khas</a>
+      <div class="scanner-footer">
+        PingKereta • Mudah • Selamat • Tanpa nombor telefon
       </div>
     </div>
   </div>

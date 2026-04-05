@@ -36,6 +36,15 @@
         </div>
       </div>
 
+      <div class="notice" style="margin-top:20px;">
+        <strong>Telegram Status:</strong>
+        {% if user.contact %}
+          ✅ Connected ({{ user.contact }})
+        {% else %}
+          ❌ Not connected yet
+        {% endif %}
+      </div>
+
       <div class="notice">
         <strong>Public QR link</strong><br>
         <input id="qrLink" type="text" value="https://pingkereta-my.onrender.com/s/{{ code }}" readonly style="width:100%;padding:10px;margin-top:8px;">

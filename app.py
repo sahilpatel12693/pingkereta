@@ -9,8 +9,6 @@ app = Flask(__name__)
 
 DATABASE = "pingkereta.db"
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-
-# Replace with your actual Telegram bot username, without @
 BOT_USERNAME = "PingKereta_my_bot"
 
 
@@ -51,6 +49,13 @@ def init_db():
             message TEXT,
             created_at TEXT,
             FOREIGN KEY(owner_id) REFERENCES owners(id)
+        )
+    """)
+
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS stickers (
+            code TEXT PRIMARY KEY,
+            is_used INTEGER DEFAULT 0
         )
     """)
 
@@ -117,6 +122,53 @@ def register():
     return render_template("register.html")
 
 
+@app.route("/activate-sticker", methods=["POST"])
+def activate_sticker():
+    code = request.form.get("code", "").strip().upper()
+    name = request.form.get("name", "").strip()
+    plate = request.form.get("plate", "").strip()
+
+    db = get_db()
+
+    sticker = db.execute(
+        "SELECT * FROM stickers WHERE code = ?",
+        (code,)
+    ).fetchone()
+
+    if not sticker:
+        return "Invalid sticker code", 400
+
+    existing = db.execute(
+        "SELECT * FROM owners WHERE code = ?",
+        (code,)
+    ).fetchone()
+
+    if existing:
+        return "Sticker already activated", 400
+
+    owner_token = str(uuid.uuid4())
+
+    db.execute("""
+        INSERT INTO owners (code, owner_token, name, contact, plate, notif)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        code,
+        owner_token,
+        name or "Owner",
+        "",
+        plate or "-",
+        "Telegram"
+    ))
+
+    db.execute(
+        "UPDATE stickers SET is_used = 1 WHERE code = ?",
+        (code,)
+    )
+
+    db.commit()
+    return "Sticker activated successfully", 200
+
+
 @app.route("/dashboard/<code>")
 def dashboard(code):
     db = get_db()
@@ -178,40 +230,54 @@ def owner_dashboard(owner_token):
 @app.route("/s/<code>")
 def sticker(code):
     db = get_db()
-    cur = db.cursor()
 
-    cur.execute("SELECT * FROM owners WHERE code = %s", (code,))
-    user = fetchone_dict(cur)
-    cur.close()
+    sticker_row = db.execute(
+        "SELECT * FROM stickers WHERE code = ?",
+        (code,)
+    ).fetchone()
 
-    # If sticker not registered yet, show activation page
+    if not sticker_row:
+        return "Invalid sticker", 404
+
+    user = db.execute(
+        "SELECT * FROM owners WHERE code = ?",
+        (code,)
+    ).fetchone()
+
     if not user:
         return render_template("register_by_qr.html", code=code)
 
-    # If already registered, show normal scanner page
     return render_template("sticker_page.html", code=code, user=user)
+
 
 @app.route("/register/<code>", methods=["POST"])
 def register_by_qr(code):
     name = request.form.get("name", "").strip()
     plate = request.form.get("plate", "").strip()
 
-    owner_token = str(uuid.uuid4())
-
     db = get_db()
-    cur = db.cursor()
 
-    # Check if already registered
-    cur.execute("SELECT * FROM owners WHERE code = %s", (code,))
-    existing = cur.fetchone()
+    sticker_row = db.execute(
+        "SELECT * FROM stickers WHERE code = ?",
+        (code,)
+    ).fetchone()
+
+    if not sticker_row:
+        return "Invalid sticker code", 400
+
+    existing = db.execute(
+        "SELECT * FROM owners WHERE code = ?",
+        (code,)
+    ).fetchone()
 
     if existing:
-        cur.close()
         return "This sticker is already registered.", 400
 
-    cur.execute("""
+    owner_token = str(uuid.uuid4())
+
+    db.execute("""
         INSERT INTO owners (code, owner_token, name, contact, plate, notif)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?, ?)
     """, (
         code,
         owner_token,
@@ -221,8 +287,12 @@ def register_by_qr(code):
         "Telegram"
     ))
 
+    db.execute(
+        "UPDATE stickers SET is_used = 1 WHERE code = ?",
+        (code,)
+    )
+
     db.commit()
-    cur.close()
 
     return redirect(url_for("dashboard", code=code))
 
@@ -275,6 +345,14 @@ def send_message(code, msg):
     db.commit()
 
     chat_id = (user["contact"] or "").strip()
+
+    if not chat_id:
+        return render_template(
+            "sent.html",
+            code=code,
+            message=message + " | Telegram not connected yet"
+        )
+
     telegram_text = (
         f"🚗 PingKereta Alert\n\n"
         f"Plate: {user['plate']}\n"
@@ -287,7 +365,7 @@ def send_message(code, msg):
     return render_template(
         "sent.html",
         code=code,
-        message=message + (" | Telegram sent" if ok else " | Telegram failed")
+        message=message + (" | Telegram sent" if ok else f" | Telegram failed")
     )
 
 
@@ -337,13 +415,15 @@ def custom_message(code):
             db.commit()
 
             chat_id = (user["contact"] or "").strip()
-            telegram_text = (
-                f"🚗 PingKereta Alert\n\n"
-                f"Plate: {user['plate']}\n"
-                f"Message: {final_message}\n"
-                f"Time: {now}"
-            )
-            send_telegram(chat_id, telegram_text)
+
+            if chat_id:
+                telegram_text = (
+                    f"🚗 PingKereta Alert\n\n"
+                    f"Plate: {user['plate']}\n"
+                    f"Message: {final_message}\n"
+                    f"Time: {now}"
+                )
+                send_telegram(chat_id, telegram_text)
 
             return render_template(
                 "sent.html",
@@ -379,7 +459,6 @@ def telegram_sync():
         chat = message.get("chat", {})
         chat_id = str(chat.get("id", ""))
 
-        # 🔥 Detect /start TOKEN
         if text.startswith("/start"):
             parts = text.split()
 
@@ -391,7 +470,6 @@ def telegram_sync():
                     (owner_token,)
                 ).fetchone()
 
-                # 🔥 IMPORTANT FIX → always update (no condition)
                 if owner:
                     db.execute("""
                         UPDATE owners
@@ -402,7 +480,6 @@ def telegram_sync():
 
                     linked_count += 1
 
-                    # send confirmation
                     send_telegram(
                         chat_id,
                         "✅ PingKereta connected successfully!"
@@ -412,6 +489,18 @@ def telegram_sync():
         "status": "ok",
         "linked_count": linked_count
     }
+
+
+@app.route("/add-test-sticker/<code>")
+def add_test_sticker(code):
+    db = get_db()
+    db.execute(
+        "INSERT OR IGNORE INTO stickers (code) VALUES (?)",
+        (code.upper(),)
+    )
+    db.commit()
+    return f"Sticker {code.upper()} added"
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

@@ -1,0 +1,11 @@
+# New standalone web deployment; pre-existing legacy tracked files are untouched
+node_modules/
+.netlify/
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.db-journal

@@ -322,12 +322,10 @@ async function handler(event){
   const devices=Array.isArray(owner.pushSubscriptions)?owner.pushSubscriptions:[];
   let activeDevices=devices,acceptedPush=0;
   if(devices.length){
-   activeDevices=[];
-   for(const sub of devices){
-    const result=await sendPushToDevice(sub,body.type);
-    if(result.accepted)acceptedPush++;
-    if(!result.expired)activeDevices.push(sub);
-   }
+   // Send to at most 3 devices concurrently, avoiding 3 sequential push timeouts.
+   const results=await Promise.all(devices.slice(0,3).map(sub=>sendPushToDevice(sub,body.type)));
+   activeDevices=devices.slice(0,3).filter((sub,i)=>!results[i].expired);
+   acceptedPush=results.filter(result=>result.accepted).length;
    owner.pushSubscriptions=activeDevices;
    if(acceptedPush){delivered=true;channel='web-push';}
   }

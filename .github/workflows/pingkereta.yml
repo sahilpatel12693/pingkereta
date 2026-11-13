@@ -4,9 +4,7 @@ on:
     paths:
       - 'netlify/functions/pingkereta.js'
       - 'public/**'
-      - 'tests/pingkereta*'
-      - 'tests/domain.test.cjs'
-      - 'tests/backend-readiness.test.cjs'
+      - 'tests/**'
       - 'scripts/**'
       - '.env.example'
       - 'netlify.toml'
@@ -39,6 +37,7 @@ jobs:
           node --check netlify/functions/health.js
           node --check scripts/preflight.cjs
           node --check scripts/smoke.mjs
+          node --check scripts/issue-pilot-invite.cjs
       - name: Run standalone deployment preflight
         run: npm run preflight
       - name: Run full API, safety, domain and preview regression tests

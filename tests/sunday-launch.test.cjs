@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'..');
 const file=p=>fs.readFileSync(path.join(root,p),'utf8');
 function api(env={}){
  const context={exports:{},process:{env},console,Buffer,URL,URLSearchParams,require(name){
-  if(name==='@netlify/blobs')return {getStore:()=>{throw Error('No store expected')}},
+  if(name==='@netlify/blobs')return {getStore:()=>{throw Error('No store expected')}};
   if(name==='qrcode')return {toString:async()=>''};
   return require(name);
  }};

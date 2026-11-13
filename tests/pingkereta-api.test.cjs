@@ -33,6 +33,9 @@ function harness(){
   if(name==='node:https')return fakeHttps;
   return require(name);
  },process:{env:{
+  PINGKERETA_VAPID_PUBLIC_KEY:'B'+'a'.repeat(86),
+  PINGKERETA_VAPID_PRIVATE_KEY:'a'.repeat(43),
+  PINGKERETA_VAPID_SUBJECT:'mailto:test@pingkereta.com',
   PINGKERETA_ENABLE_LIVE:'true',
   PINGKERETA_RELEASE_APPROVED:'true',
   PINGKERETA_PILOT_INVITE_SECRET:'test-only-secret-that-is-long-enough-for-pilot',

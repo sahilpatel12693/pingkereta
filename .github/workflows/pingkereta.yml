@@ -1,0 +1,35 @@
+name: PingKereta standalone migration checks
+on:
+  pull_request:
+    paths:
+      - 'netlify/functions/pingkereta.js'
+      - 'public/**'
+      - 'tests/pingkereta*'
+      - 'tests/domain.test.cjs'
+      - 'netlify.toml'
+      - 'package.json'
+      - '.github/workflows/pingkereta.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'netlify/functions/pingkereta.js'
+      - 'public/**'
+      - 'tests/**'
+      - 'netlify.toml'
+      - 'package.json'
+permissions:
+  contents: read
+jobs:
+  pingkereta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax validation
+        run: |
+          node --check netlify/functions/pingkereta.js
+          node --check public/app.js
+      - name: Run API, domain migration and preview tests
+        run: node --test tests/pingkereta.test.cjs tests/pingkereta-api.test.cjs tests/pingkereta-demo.test.cjs tests/domain.test.cjs

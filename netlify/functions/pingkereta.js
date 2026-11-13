@@ -254,4 +254,23 @@ async function handler(event){
  }
  return json(404,{error:'Not found'},headers);
 }
-exports.handler=async e=>{if(process.env.PINGKERETA_ENABLE_LIVE!=='true')return json(503,{error:'PingKereta preview is available. Registrations and alerts are disabled until security and messaging setup is complete.'},baseHeaders);try{return await handler(e);}catch(err){console.error('PingKereta error:',err.message);return json(500,{error:'Service temporarily unavailable.'},baseHeaders);}};
+// Two independent release flags prevent an accidental public activation from a single toggle.
+function liveConfigurationComplete(){
+ const env=process.env;
+ return !!(
+  env.PINGKERETA_PILOT_INVITE_SECRET&&env.PINGKERETA_PILOT_INVITE_SECRET.length>=32&&
+  /^[a-f0-9]{64}$/i.test(env.PINGKERETA_DATA_ENCRYPTION_KEY||'')&&
+  env.PINGKERETA_TWILIO_ACCOUNT_SID&&env.PINGKERETA_TWILIO_AUTH_TOKEN&&
+  env.PINGKERETA_TWILIO_VERIFY_SERVICE_SID&&
+  env.PINGKERETA_TWILIO_WHATSAPP_FROM&&
+  /^HX[a-f0-9]{32}$/i.test(env.PINGKERETA_WHATSAPP_CONTENT_SID||'')&&
+  env.PINGKERETA_TWILIO_STATUS_URL==='https://pingkereta.com/api/pingkereta/twilio-status'
+ );
+}
+exports.handler=async e=>{
+ if(process.env.PINGKERETA_ENABLE_LIVE!=='true'||process.env.PINGKERETA_RELEASE_APPROVED!=='true')
+  return json(503,{error:'PingKereta preview is available. Registrations and alerts are disabled until security and messaging setup is complete.'},baseHeaders);
+ if(!liveConfigurationComplete())
+  return json(503,{error:'PingKereta backend is not configured for a controlled pilot.'},baseHeaders);
+ try{return await handler(e);}catch(err){console.error('PingKereta error:',err.message);return json(500,{error:'Service temporarily unavailable.'},baseHeaders);}
+};

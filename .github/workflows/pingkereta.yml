@@ -6,6 +6,9 @@ on:
       - 'public/**'
       - 'tests/pingkereta*'
       - 'tests/domain.test.cjs'
+      - 'tests/backend-readiness.test.cjs'
+      - 'scripts/**'
+      - '.env.example'
       - 'netlify.toml'
       - 'package.json'
       - '.github/workflows/pingkereta.yml'
@@ -17,6 +20,8 @@ on:
       - 'tests/**'
       - 'netlify.toml'
       - 'package.json'
+      - 'scripts/**'
+      - '.env.example'
 permissions:
   contents: read
 jobs:
@@ -31,5 +36,10 @@ jobs:
         run: |
           node --check netlify/functions/pingkereta.js
           node --check public/app.js
-      - name: Run API, domain migration and preview tests
-        run: node --test tests/pingkereta.test.cjs tests/pingkereta-api.test.cjs tests/pingkereta-demo.test.cjs tests/domain.test.cjs
+          node --check netlify/functions/health.js
+          node --check scripts/preflight.cjs
+          node --check scripts/smoke.mjs
+      - name: Run standalone deployment preflight
+        run: npm run preflight
+      - name: Run full API, safety, domain and preview regression tests
+        run: npm test

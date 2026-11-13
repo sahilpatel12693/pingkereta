@@ -34,6 +34,7 @@ function harness(){
   return require(name);
  },process:{env:{
   PINGKERETA_ENABLE_LIVE:'true',
+  PINGKERETA_RELEASE_APPROVED:'true',
   PINGKERETA_PILOT_INVITE_SECRET:'test-only-secret-that-is-long-enough-for-pilot',
   PINGKERETA_DATA_ENCRYPTION_KEY:'a'.repeat(64),
   PINGKERETA_TWILIO_ACCOUNT_SID:'ACtest',

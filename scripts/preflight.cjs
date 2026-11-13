@@ -15,7 +15,7 @@ const health=read('netlify/functions/health.js');
 const demo=read('public/test/index.html');
 const siteFiles=[home,script,api,demo];
 assert.equal(pkg.name,'pingkereta-web');
-assert.ok(pkg.dependencies.qrcode&&pkg.dependencies['@netlify/blobs']);
+assert.ok(pkg.dependencies.qrcode&&pkg.dependencies['@netlify/blobs']&&pkg.dependencies['web-push']);
 assert.match(config,/publish\s*=\s*"public"/);
 assert.match(config,/functions\s*=\s*"netlify\/functions"/);
 assert.match(config,/from\s*=\s*"\/api\/pingkereta\/\*"/);

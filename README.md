@@ -2,7 +2,7 @@
 
 **Primary domain:** https://pingkereta.com/
 
-**Sunday 15 November 2026 target:** deploy the public **preview site**, not open live messaging to all drivers. Official Meta/Twilio and security approvals are a separate controlled-pilot gate.
+**Sunday 15 November 2026 target:** deploy the public **preview site**, not open live messaging to all drivers. Free Web Push is now the primary pilot notification channel; WhatsApp is optional. Official Meta/Twilio and security approvals are a separate controlled-pilot gate.
 
 This repository now contains two codebases:
 - `public/`, `netlify/`, `tests/`: the newer independent QR parking alert website migrated from the CHAAAM prototype.
@@ -12,6 +12,13 @@ This repository now contains two codebases:
 - Mobile-first bilingual Malay/English interface, QR scan concept, owner preview and a **fully simulated** test lab at `/test/`.
 - Production WhatsApp integration is implemented only as a gated, unverified pilot foundation. **Live registration and messaging are OFF by default** in both the browser and the API.
 - No live data, stickers, secrets or existing users have been copied from CHAAAM or the legacy Render/SQLite service.
+
+## Free Web Push — the primary alert channel
+- Native Push API, Notifications API and Service Worker send no paid WhatsApp message when browser push is accepted.
+- iOS 16.4+ needs an installed Home Screen web app. **Install PingKereta before registering on iPhone** because the current browser-bound session may not transfer from Safari to the installed app.
+- PWA assets: `/manifest.webmanifest` and `/sw.js`; owner UI: Enable/Disable free notifications; backend: authenticated push subscription and unsubscription, up to three owner devices, no exposed endpoints in public API.
+- Configure a permanent VAPID pair in Netlify only: `npm install && npm run vapid`. Both release flags remain false until a controlled pilot is approved and tested.
+- See [free Web Push setup and safety checklist](docs/free-web-push-pilot.md). Meta/Twilio is optional, not required to launch the free channel.
 
 ## Sunday frontend and Meta WhatsApp preparation
 - Mobile-first premium bilingual homepage now uses the server's safe `/api/pingkereta/status` endpoint to distinguish public preview from a separately authorised controlled pilot.

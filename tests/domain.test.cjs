@@ -8,7 +8,7 @@ const file=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('standalone site contains no CHAAAM links and uses canonical pingkereta.com',()=>{
  for(const p of ['public/index.html','public/app.js','public/test/index.html','netlify/functions/pingkereta.js']){
   const content=file(p);
-  assert.doesNotMatch(content,/chaaam\\.com|CHAAAM|\/pingkereta\/app\\.js|\/pingkereta\/test\//i,p);
+  assert.doesNotMatch(content,/chaaam\.com|CHAAAM|\/pingkereta\/app\.js|\/pingkereta\/test\//i,p);
  }
  const html=file('public/index.html');
  assert.match(html,/href="https:\/\/pingkereta\.com\/"/);

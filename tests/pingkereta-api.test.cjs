@@ -94,7 +94,7 @@ test('verified SMS is submitted to provider; scanner never receives owner number
  assert.equal(pub.data.phone,undefined);
  const alert=await h.call('alert',{method:'POST',body:{code,type:'blocking'}});
  assert.equal(alert.statusCode,200);
- assert.equal(alert.data.delivered,true);
+ assert.equal(alert.data.delivered,false); assert.equal(alert.data.submitted,true);
  assert.match(alert.data.message,/submitted/);
  const last=h.sent.at(-1);
  assert.match(last.options.path,/Messages.json/);
@@ -168,7 +168,7 @@ test('signed Twilio callbacks confirm delivery and do not regress on out-of-orde
  await h.call('sms-start',{method:'POST',cookie,body:{code,phone:'+60123456789',consent:true,channel:'whatsapp'}});
  await h.call('sms-confirm',{method:'POST',cookie,body:{code,otp:'123456'}});
  const alert=await h.call('alert',{method:'POST',body:{code,type:'blocking'}});
- assert.equal(alert.data.delivered,true);
+ assert.equal(alert.data.delivered,false); assert.equal(alert.data.submitted,true);
  assert.match(h.sent.at(-1).body,/StatusCallback=/);
  const sid='SM'+'c'.repeat(32);
  async function callback(status,sign=true){

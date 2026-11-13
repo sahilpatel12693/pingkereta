@@ -2,6 +2,8 @@
 
 **Primary domain:** https://pingkereta.com/
 
+**Sunday 15 November 2026 target:** deploy the public **preview site**, not open live messaging to all drivers. Official Meta/Twilio and security approvals are a separate controlled-pilot gate.
+
 This repository now contains two codebases:
 - `public/`, `netlify/`, `tests/`: the newer independent QR parking alert website migrated from the CHAAAM prototype.
 - `app.py`, `templates/`, `static/`: legacy Flask/Telegram app retained during migration so previous QR stickers, data and deployments are not disrupted.
@@ -10,6 +12,13 @@ This repository now contains two codebases:
 - Mobile-first bilingual Malay/English interface, QR scan concept, owner preview and a **fully simulated** test lab at `/test/`.
 - Production WhatsApp integration is implemented only as a gated, unverified pilot foundation. **Live registration and messaging are OFF by default** in both the browser and the API.
 - No live data, stickers, secrets or existing users have been copied from CHAAAM or the legacy Render/SQLite service.
+
+## Sunday frontend and Meta WhatsApp preparation
+- Mobile-first premium bilingual homepage now uses the server's safe `/api/pingkereta/status` endpoint to distinguish public preview from a separately authorised controlled pilot.
+- The public demo remains isolated and does not send real messages. Registration requires an authorised pilot invitation; owner QR print/deletion and consent/OTP workflows are implemented but remain disabled for visitors during preview.
+- [Official Meta/Twilio setup and Sunday go/no-go plan](docs/meta-whatsapp-sunday-launch.md).
+- Operator-only pilot invite helper: `npm run invite -- "JXX 1234" 60` **only** in a secure terminal with `PINGKERETA_PILOT_INVITE_SECRET` configured and after operator ownership checks. The current invitation mechanism is not atomic/single-use.
+- Real provider submission and confirmed handset delivery are distinct states; the API never claims a successful provider submission proves delivery.
 
 ## Saturday deployment preparation (14 November 2026)
 - Follow [the guided Saturday runbook](docs/saturday-2026-11-14-runbook.md).

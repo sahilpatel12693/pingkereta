@@ -94,7 +94,7 @@ test('verified SMS is submitted to provider; scanner never receives owner number
  assert.equal(pub.data.phone,undefined);
  const alert=await h.call('alert',{method:'POST',body:{code,type:'blocking'}});
  assert.equal(alert.statusCode,200);
- assert.equal(alert.data.delivered,true);
+ assert.equal(alert.data.delivered,false); assert.equal(alert.data.submitted,true);
  assert.match(alert.data.message,/submitted/);
  const last=h.sent.at(-1);
  assert.match(last.options.path,/Messages.json/);
@@ -168,7 +168,7 @@ test('signed Twilio callbacks confirm delivery and do not regress on out-of-orde
  await h.call('sms-start',{method:'POST',cookie,body:{code,phone:'+60123456789',consent:true,channel:'whatsapp'}});
  await h.call('sms-confirm',{method:'POST',cookie,body:{code,otp:'123456'}});
  const alert=await h.call('alert',{method:'POST',body:{code,type:'blocking'}});
- assert.equal(alert.data.delivered,true);
+ assert.equal(alert.data.delivered,false); assert.equal(alert.data.submitted,true);
  assert.match(h.sent.at(-1).body,/StatusCallback=/);
  const sid='SM'+'c'.repeat(32);
  async function callback(status,sign=true){
@@ -188,4 +188,18 @@ test('signed Twilio callbacks confirm delivery and do not regress on out-of-orde
  assert.equal(owner.data.alerts[0].deliveryStatus,'delivered');
  await callback('read');owner=await h.call('owner?code='+code,{cookie});
  assert.equal(owner.data.alerts[0].deliveryStatus,'read');
+});
+
+test('owner-delete requires authentication and retires the scanned QR',async()=>{
+ const h=harness();
+ const created=await h.call('create',{method:'POST',body:{plate:'AB 1234'}});
+ const code=created.data.code;
+ const cookie=created.headers['Set-Cookie'].split(';')[0];
+ const unauth=await h.call('owner-delete',{method:'POST',body:{code,confirmPlate:'AB 1234'}});
+ assert.equal(unauth.statusCode,401);
+ const invalid=await h.call('owner-delete',{method:'POST',cookie,body:{code,confirmPlate:'OTHER'}});
+ assert.equal(invalid.statusCode,400);
+ const removed=await h.call('owner-delete',{method:'POST',cookie,body:{code,confirmPlate:'AB 1234'}});
+ assert.equal(removed.statusCode,200);
+ assert.equal((await h.call('public?code='+code)).statusCode,404);
 });

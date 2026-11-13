@@ -194,6 +194,18 @@ async function handler(event){
   return {statusCode:200,headers:{'Content-Type':'image/svg+xml; charset=utf-8','Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; sandbox"},body:svg};
  }
 
+ if(path==='owner-delete'&&method==='POST'){
+  if(!ownerAuthenticated(event,owner,code))return json(401,{error:'Owner authentication required'},headers);
+  const confirmed=strip(body.confirmPlate).toUpperCase().replace(/[^A-Z0-9 -]/g,'').slice(0,18);
+  if(confirmed!==owner.plate)return json(400,{error:'Confirm the exact vehicle registration number to delete.'},headers);
+  // Delete access and associated records. Blob storage is not transactional; public rollout
+  // still requires a transactional backend and a data-retention audit.
+  await s.delete('vehicle/'+code);
+  await s.delete('plate/'+hash(owner.plate));
+  await s.delete('pending-phone/'+code);
+  for(const alert of owner.alerts||[]){if(alert.providerSid)await s.delete('delivery/'+alert.providerSid);}
+  return json(200,{ok:true,message:'Your vehicle sticker has been deactivated and the owner record deleted.'},{...headers,'Set-Cookie':'pk_owner=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'});
+ }
  if(path==='sms-start'&&method==='POST'){
   if(!ownerAuthenticated(event,owner,code))return json(401,{error:'Owner authentication required'},headers);
   if(!await rateLimit(s,'verify:'+code,3600000,3))return json(429,{error:'Too many verification attempts'},headers);
@@ -246,7 +258,7 @@ async function handler(event){
   owner.alerts=[entry,...(owner.alerts||[])].slice(0,40);
   await save(s,'vehicle/'+code,owner);
   if(providerSid)await save(s,'delivery/'+providerSid,{code,id,created:Date.now()});
-  return json(200,{ok:true,delivered,message:delivered?'Alert submitted to notification provider. Delivery is not guaranteed.':'Alert recorded, but instant delivery is not connected.'},headers);
+  return json(200,{ok:true,submitted:delivered,delivered:false,message:delivered?'Alert submitted to notification provider. Delivery is not yet confirmed.':'Alert recorded, but instant delivery is not connected.'},headers);
  }
  if(path==='owner'&&method==='GET'){
   if(!ownerAuthenticated(event,owner,code))return json(401,{error:'Owner authentication required.'},headers);
@@ -268,6 +280,13 @@ function liveConfigurationComplete(){
  );
 }
 exports.handler=async e=>{
+ // Safe, read-only public configuration endpoint. Storage and messaging remain untouched.
+ const requestPath=(e.path||'').replace(/^\/\.netlify\/functions\/pingkereta\/?/,'').replace(/^\/api\/pingkereta\/?/,'').replace(/^\/+|\/+$/g,'');
+ if(requestPath==='status'){
+  if((e.httpMethod||'GET')!=='GET')return json(405,{error:'Method not allowed'},baseHeaders);
+  const enabled=process.env.PINGKERETA_ENABLE_LIVE==='true'&&process.env.PINGKERETA_RELEASE_APPROVED==='true'&&liveConfigurationComplete();
+  return json(200,{mode:enabled?'controlled-pilot':'preview',registration:enabled?'invitation-only':'disabled',notifications:enabled?'provider-configured-not-verified':'disabled',product:'PingKereta'},baseHeaders);
+ }
  if(process.env.PINGKERETA_ENABLE_LIVE!=='true'||process.env.PINGKERETA_RELEASE_APPROVED!=='true')
   return json(503,{error:'PingKereta preview is available. Registrations and alerts are disabled until security and messaging setup is complete.'},baseHeaders);
  if(!liveConfigurationComplete())

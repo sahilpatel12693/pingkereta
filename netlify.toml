@@ -1,0 +1,39 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/pingkereta/*"
+  to = "/.netlify/functions/pingkereta/:splat"
+  status = 200
+  force = true
+
+# Redirect old subpaths on this standalone domain to root routes.
+[[redirects]]
+  from = "/pingkereta"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/pingkereta/*"
+  to = "/:splat"
+  status = 301
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    X-Frame-Options = "SAMEORIGIN"
+    Content-Security-Policy = "frame-ancestors 'self'"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/api/pingkereta/*"
+  [headers.values]
+    Cache-Control = "no-store"
+    Referrer-Policy = "no-referrer"
+    X-Robots-Tag = "noindex, nofollow"

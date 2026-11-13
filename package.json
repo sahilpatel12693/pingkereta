@@ -1,0 +1,17 @@
+{
+  "name": "pingkereta-web",
+  "version": "2.0.0-preview",
+  "private": true,
+  "description": "Standalone PingKereta QR parking alerts website (preview; live notifications disabled)",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "node --check netlify/functions/pingkereta.js && node --check public/app.js"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.4",
+    "qrcode": "^1.5.4"
+  }
+}

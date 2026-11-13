@@ -11,7 +11,7 @@
   status = 200
   force = true
 
-# Legacy subpath on the new standalone domain, not a CHAAAM redirect.
+# Redirect old subpaths on this standalone domain to root routes.
 [[redirects]]
   from = "/pingkereta"
   to = "/"

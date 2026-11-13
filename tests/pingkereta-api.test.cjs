@@ -249,3 +249,24 @@ test('free Web Push has no dependency on a WhatsApp sender',async()=>{
  assert.equal(typeof publicStatus.data.pushPublicKey,'string');
  assert.equal(publicStatus.data.whatsappOptional,true);
 });
+
+test('verified optional WhatsApp is NOT charged when browser push accepts the same alert',async()=>{
+ const h=harness();
+ const created=await h.call('create',{method:'POST',body:{plate:'BOTH 123'}});
+ const code=created.data.code,cookie=created.headers['Set-Cookie'].split(';')[0];
+ const start=await h.call('sms-start',{method:'POST',cookie,body:{code,phone:'+60123456789',consent:true,channel:'whatsapp'}});
+ assert.equal(start.statusCode,200);
+ const confirm=await h.call('sms-confirm',{method:'POST',cookie,body:{code,otp:'123456'}});
+ assert.equal(confirm.statusCode,200);
+ const subscription={endpoint:'https://web.push.apple.com/QWE-123',
+  keys:{p256dh:'B'+'p'.repeat(86),auth:'q'.repeat(22)}};
+ const subscribed=await h.call('push-subscribe',{method:'POST',cookie,body:{code,subscription,consent:true}});
+ assert.equal(subscribed.statusCode,200);
+ const paidCallsBefore=h.sent.length;
+ const alert=await h.call('alert',{method:'POST',body:{code,type:'blocking'}});
+ assert.equal(alert.data.submitted,true);
+ assert.equal(h.pushed.length,1);
+ assert.equal(h.sent.length,paidCallsBefore,'Web Push acceptance should not cause a Twilio message');
+ const record=await h.call('owner?code='+code,{cookie});
+ assert.equal(record.data.alerts[0].channel,'web-push');
+});

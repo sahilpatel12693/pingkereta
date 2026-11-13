@@ -8,7 +8,7 @@ test('PingKereta page has accessible registration and scanner controls',()=>{
  const html=file('public/index.html');
  for(const id of ['createForm','scanForm','plate','code','ownerPanel','alertPanel','telegramLink','qrCode','alertHistory'])
   assert.match(html,new RegExp('id="'+id+'"'));
- assert.match(html,/\/pingkereta\/app\.js/);
+ assert.match(html,/src="\/app\.js"/);
 });
 test('API routes and storage have owner authentication and webhook verification',()=>{
  const src=file('netlify/functions/pingkereta.js');

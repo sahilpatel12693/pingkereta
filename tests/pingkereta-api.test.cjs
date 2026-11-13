@@ -8,7 +8,7 @@ const crypto=require('node:crypto');
 const root=path.resolve(__dirname,'..');
 const file=p=>fs.readFileSync(path.join(root,p),'utf8');
 function harness(){
- const records=new Map(),sent=[];
+ const records=new Map(),sent=[],pushed=[];
  const blobs={getStore:()=>({
   get:async k=>records.get(k)||null,
   setJSON:async(k,v)=>{records.set(k,structuredClone(v));},
@@ -30,6 +30,7 @@ function harness(){
  const context={exports:{},require(name){
   if(name==='@netlify/blobs')return blobs;
   if(name==='qrcode')return {toString:async()=>'<svg xmlns="http://www.w3.org/2000/svg"></svg>'};
+  if(name==='web-push')return {setVapidDetails:()=>{},sendNotification:async(subscription,payload)=>{pushed.push({subscription,payload:JSON.parse(payload)});return {statusCode:201};}};
   if(name==='node:https')return fakeHttps;
   return require(name);
  },process:{env:{
@@ -56,7 +57,7 @@ function harness(){
   const res=await context.exports.handler(event);
   return {...res,data:JSON.parse(res.body.startsWith('{')?res.body:'{}')};
  }
- return {call,records,sent};
+ return {call,records,sent,pushed};
 }
 test('new owner cannot receive SMS before consent and phone verification',async()=>{
  const h=harness(),r=await h.call('create',{method:'POST',body:{plate:'JXX 1234'}});
@@ -205,4 +206,46 @@ test('owner-delete requires authentication and retires the scanned QR',async()=>
  const removed=await h.call('owner-delete',{method:'POST',cookie,body:{code,confirmPlate:'AB 1234'}});
  assert.equal(removed.statusCode,200);
  assert.equal((await h.call('public?code='+code)).statusCode,404);
+});
+
+test('free browser Web Push is owner-authorised, private and tried before WhatsApp',async()=>{
+ const h=harness();
+ const created=await h.call('create',{method:'POST',body:{plate:'PUSH 1234'}});
+ const code=created.data.code,cookie=created.headers['Set-Cookie'].split(';')[0];
+ const subscription={endpoint:'https://fcm.googleapis.com/fcm/send/example',
+  keys:{p256dh:'B'+'k'.repeat(86),auth:'z'.repeat(22)}};
+ assert.equal((await h.call('push-subscribe',{method:'POST',body:{code,consent:true,subscription}})).statusCode,401);
+ assert.equal((await h.call('push-subscribe',{method:'POST',cookie,body:{code,consent:false,subscription}})).statusCode,400);
+ const bad={...subscription,endpoint:'https://evil.example/receive'};
+ assert.equal((await h.call('push-subscribe',{method:'POST',cookie,body:{code,consent:true,subscription:bad}})).statusCode,400);
+ const enabled=await h.call('push-subscribe',{method:'POST',cookie,body:{code,consent:true,subscription}});
+ assert.equal(enabled.statusCode,200);
+ assert.equal(enabled.data.devices,1);
+ const scanner=await h.call('public?code='+code);
+ assert.equal(scanner.data.endpoint,undefined);
+ assert.ok(!JSON.stringify(scanner.data).includes('fcm.googleapis.com'));
+ const alert=await h.call('alert',{method:'POST',body:{code,type:'lights'}});
+ assert.equal(alert.statusCode,200);
+ assert.equal(alert.data.submitted,true);
+ assert.equal(alert.data.delivered,false);
+ assert.equal(h.pushed.length,1);
+ assert.equal(h.sent.length,0,'No paid provider request when free Web Push accepts the alert');
+ assert.equal(h.pushed[0].payload.body.includes('PUSH 1234'),false,'Lock screen payload must not disclose plate');
+ const dashboard=await h.call('owner?code='+code,{cookie});
+ assert.equal(dashboard.data.pushEnabled,true);
+ assert.equal(dashboard.data.pushDevices,1);
+ assert.equal(dashboard.data.alerts[0].channel,'web-push');
+ assert.equal(dashboard.data.alerts[0].deliveryStatus,'push_accepted');
+ assert.ok(!JSON.stringify(dashboard.data).includes('fcm.googleapis.com'));
+ const removed=await h.call('push-unsubscribe',{method:'POST',cookie,body:{code,endpoint:subscription.endpoint}});
+ assert.equal(removed.statusCode,200);
+ assert.equal(removed.data.devices,0);
+});
+test('free Web Push has no dependency on a WhatsApp sender',async()=>{
+ const h=harness();
+ const publicStatus=await h.call('status');
+ assert.equal(publicStatus.data.mode,'controlled-pilot');
+ assert.equal(publicStatus.data.notifications,'web-push-first');
+ assert.equal(typeof publicStatus.data.pushPublicKey,'string');
+ assert.equal(publicStatus.data.whatsappOptional,true);
 });

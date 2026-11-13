@@ -24,6 +24,9 @@ assert.match(home,/https:\/\/pingkereta\.com\//);
 assert.match(home,/href="\/test\/"/);
 assert.match(home,/src="\/app\.js"/);
 assert.match(script,/PREVIEW_ONLY=true/);
+assert.match(config,/from\\s*=\\s*"\\/api\\/pingkereta\\/\\*"/);
+assert.match(read('public/manifest.webmanifest'),/"display"\\s*:\\s*"standalone"/);
+assert.match(read('public/sw.js'),/showNotification/);
 assert.match(script,/request\('status'\)/);
 assert.match(home,/id="pilotInvite"/);
 assert.match(home,/id="deleteOwner"/);
@@ -36,9 +39,7 @@ for(const file of ['.env','.env.production','.env.local'])assert.ok(!fs.existsSy
 if(process.argv.includes('--production')){
  const required=[
  'PINGKERETA_PILOT_INVITE_SECRET','PINGKERETA_DATA_ENCRYPTION_KEY',
- 'PINGKERETA_TWILIO_ACCOUNT_SID','PINGKERETA_TWILIO_AUTH_TOKEN',
- 'PINGKERETA_TWILIO_VERIFY_SERVICE_SID','PINGKERETA_TWILIO_WHATSAPP_FROM',
- 'PINGKERETA_WHATSAPP_CONTENT_SID','PINGKERETA_TWILIO_STATUS_URL'
+ 'PINGKERETA_VAPID_PUBLIC_KEY','PINGKERETA_VAPID_PRIVATE_KEY','PINGKERETA_VAPID_SUBJECT'
  ];
  const missing=required.filter(k=>!process.env[k]);
  if(missing.length)throw Error('Required production settings missing: '+missing.join(', '));
@@ -46,8 +47,8 @@ if(process.argv.includes('--production')){
  assert.equal(process.env.PINGKERETA_RELEASE_APPROVED,'true','Release approval flag not set');
  assert.ok(process.env.PINGKERETA_PILOT_INVITE_SECRET.length>=32,'Invitation secret must be at least 32 characters');
  assert.match(process.env.PINGKERETA_DATA_ENCRYPTION_KEY,/^[a-f0-9]{64}$/i,'AES key must be 64 hex characters');
- assert.match(process.env.PINGKERETA_WHATSAPP_CONTENT_SID,/^HX[a-f0-9]{32}$/i);
- assert.equal(process.env.PINGKERETA_TWILIO_STATUS_URL,'https://pingkereta.com/api/pingkereta/twilio-status');
+ assert.match(process.env.PINGKERETA_VAPID_PUBLIC_KEY,/^[A-Za-z0-9_-]{60,180}$/);
+ assert.match(process.env.PINGKERETA_VAPID_PRIVATE_KEY,/^[A-Za-z0-9_-]{30,100}$/);
  console.log('Production configuration shape looks valid. This does NOT approve or enable release.');
 }else{
  console.log('PingKereta static deployment preflight passed; live production readiness is NOT certified.');

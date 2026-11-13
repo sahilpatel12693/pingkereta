@@ -1,7 +1,9 @@
 # PingKereta — Meta WhatsApp Business and Sunday launch plan
 **Prepared 13 November 2026 | Target public website: Sunday, 15 November 2026**
 
-## Decision: use Twilio with Meta, not a second direct Cloud API integration
+**Important update (13 November 2026): Free browser Web Push is now PingKereta's primary pilot notification channel. Meta/Twilio onboarding below is OPTIONAL and can be done after the free-push pilot. Do not delay the public website preview waiting on Meta. See [Free Web Push pilot guide](free-web-push-pilot.md).**
+
+## Optional WhatsApp integration: use Twilio with Meta, not a second direct Cloud API integration
 PingKereta's existing serverless function sends owner notifications through **Twilio's WhatsApp API**. Twilio connects to your Meta WhatsApp Business Account (WABA). Use that integration for the initial authorised pilot. A direct Meta Cloud API deployment would require a distinct server implementation and new webhooks, and is **not implemented here**.
 
 ## 1. What the business owner must do in Meta (start immediately)

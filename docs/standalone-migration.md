@@ -5,7 +5,7 @@
 - Site canonical, branding, sticker-print text, test-lab navigation and dynamic scanner links now use pingkereta.com and standalone root paths.
 - Netlify API still routes `/api/pingkereta/*`; server-generated QR/scan URLs now point to `https://pingkereta.com/?code=...`.
 - Legacy Flask/Telegram app files are preserved, not used by the new Netlify web deployment.
-- The live backend is deliberately disabled unless `PINGKERETA_ENABLE_LIVE=true` is configured **and** the frontend preview-only flag is changed after approval.
+- The live backend is deliberately disabled unless **both** `PINGKERETA_ENABLE_LIVE=true` and `PINGKERETA_RELEASE_APPROVED=true` are configured, required pilot provider settings are valid, **and** the frontend preview-only flag is deliberately changed after all safety approvals. This is not approved for a public pilot.
 
 ## NOT done by GitHub changes
 - Domain DNS and Netlify custom-domain/HTTPS binding (requires access to Netlify site admin and Namecheap DNS).
@@ -19,6 +19,7 @@
 | `/` | PingKereta preview homepage |
 | `/test/` | Isolated in-browser simulated Test Lab |
 | `/api/pingkereta/*` | Live backend API (disabled by default) |
+| `/api/health` | Read-only function/route check (no provider/DB verification) |
 
 ## DNS and launch sequence
 1. In Netlify create separate site from `sahilpatel12693/pingkereta`, build root repository, publish `public`.
@@ -29,8 +30,12 @@
 6. Audit all live users/stickers on CHAAAM/Render before importing data or using 301 redirects from those original hosts. Existing stickers with hardcoded links require explicit redirect on their original host.
 7. Keep live messaging switched OFF until independent security, privacy, rate limiting, verified ownership and WhatsApp compliance checks pass.
 
+## Saturday preview runbook
+See `docs/saturday-2026-11-14-runbook.md`. Run `npm run preflight` then `npm run smoke -- https://YOUR-SITE.netlify.app` after deployment. Keep CHAAAM and legacy QR destinations unchanged until the new domain is confirmed.
+
 ## Environment values for eventual controlled pilot only
 - `PINGKERETA_ENABLE_LIVE` (must remain unset/false for this migration)
+- `PINGKERETA_RELEASE_APPROVED` (second independent release gate, must also remain false)
 - `PINGKERETA_PILOT_INVITE_SECRET`
 - `PINGKERETA_DATA_ENCRYPTION_KEY`
 - `PINGKERETA_TWILIO_ACCOUNT_SID`, `PINGKERETA_TWILIO_AUTH_TOKEN`

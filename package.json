@@ -11,7 +11,8 @@
     "check": "node --check netlify/functions/pingkereta.js && node --check public/app.js",
     "preflight": "node scripts/preflight.cjs",
     "smoke": "node scripts/smoke.mjs",
-    "invite": "node scripts/issue-pilot-invite.cjs"
+    "invite": "node scripts/issue-pilot-invite.cjs",
+    "vapid": "node scripts/generate-vapid.cjs"
   },
   "dependencies": {
     "@netlify/blobs": "^11.1.4",

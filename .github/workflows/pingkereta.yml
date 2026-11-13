@@ -38,6 +38,8 @@ jobs:
           node --check scripts/preflight.cjs
           node --check scripts/smoke.mjs
           node --check scripts/issue-pilot-invite.cjs
+          node --check scripts/generate-vapid.cjs
+          node --check public/sw.js
       - name: Run standalone deployment preflight
         run: npm run preflight
       - name: Run full API, safety, domain and preview regression tests

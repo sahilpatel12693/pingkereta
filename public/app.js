@@ -3,6 +3,7 @@
 const $=id=>document.getElementById(id);
 const api='/api/pingkereta/';
 let PREVIEW_ONLY=true; // Fail closed. Only explicit server-approved pilot configuration may unlock forms.
+let pushPublicKey='';
 const state={code:'',ownerCode:sessionStorage.getItem('pingkereta-owner-code')||'',ownerPlate:''};
 function message(id,value){const el=$(id);if(el)el.textContent=value;}
 function show(id,visible){const el=$(id);if(el)el.classList.toggle('hidden',!visible);}
@@ -25,7 +26,8 @@ function setMode(pilot){
  create.disabled=!pilot;find.disabled=!pilot;
  create.textContent=pilot?'Activate my sticker':'Registration coming soon';
  find.textContent=pilot?'Find vehicle':'Alerts coming soon';
- for(const id of ['startSms','confirmSms','disableSms'])$(id).disabled=!pilot;
+ for(const id of ['startSms','confirmSms','disableSms','enablePush','disablePush'])$(id).disabled=!pilot;
+ if(!pushCapable())$('enablePush').disabled=true;
  const badge=$('launchBadge');
  badge.textContent=pilot?'Restricted pilot · Invitations required':'Public preview · Live alerts disabled';
  message('workspaceNotice',pilot?
@@ -46,6 +48,8 @@ async function owner(){
   show('ownerPanel',true);
   message('ownerPlate',result.plate);
   message('telegramStatus',result.connected?'Optional Telegram connected.':'Telegram not connected (optional).');
+  message('pushDevices',(result.pushDevices||0)+' browser device(s) linked. Push is free; delivery can be delayed or muted.');
+  message('pushStatus',result.pushEnabled?'Web Push enabled on at least one device.':'Web Push is not enabled yet.');
   message('smsStatus',result.whatsappVerified?
     'Your WhatsApp number is verified for parking alerts. Provider acceptance is not proof of delivery.':
     'WhatsApp has not been verified. Enable it only if you consent to receive parking alerts.');
@@ -114,6 +118,50 @@ document.querySelectorAll('[data-alert]').forEach(button=>button.addEventListene
  }catch(error){message('alertStatus',error.message);}
  finally{buttons.forEach(b=>setBusy(b,false));}
 }));
+// Native standards-based Web Push. No account with a paid messaging provider is necessary.
+function pushCapable(){
+ return window.isSecureContext&&'serviceWorker' in navigator&&
+  'PushManager' in window&&'Notification' in window;
+}
+function vapidBytes(base64url){
+ const normalized=base64url.replace(/-/g,'+').replace(/_/g,'/');
+ const raw=atob(normalized.padEnd(Math.ceil(normalized.length/4)*4,'='));
+ return Uint8Array.from(raw,c=>c.charCodeAt(0));
+}
+$('enablePush').addEventListener('click',async()=>{
+ if(PREVIEW_ONLY||!state.ownerCode||!pushPublicKey)return;
+ if(!pushCapable()){
+  message('pushStatus','This browser cannot enable Web Push. On iPhone, install PingKereta on the Home Screen first.');
+  return;
+ }
+ const button=$('enablePush');setBusy(button,true);
+ try{
+  // Request permission directly from the user's click, as required by iOS and browsers.
+  const permission=await Notification.requestPermission();
+  if(permission!=='granted'){message('pushStatus','Permission denied. Enable notifications in your phone/browser settings.');return;}
+  const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+  const existing=await reg.pushManager.getSubscription();
+  const sub=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidBytes(pushPublicKey)});
+  const result=await request('push-subscribe','POST',{code:state.ownerCode,subscription:sub.toJSON(),consent:true});
+  message('pushStatus','Free browser notifications enabled on this device. '+result.devices+' registered device(s).');
+  await owner();
+ }catch(error){message('pushStatus','Could not enable notifications: '+error.message);}
+ finally{setBusy(button,PREVIEW_ONLY);}
+});
+$('disablePush').addEventListener('click',async()=>{
+ if(PREVIEW_ONLY||!state.ownerCode||!pushCapable())return;
+ const button=$('disablePush');setBusy(button,true);
+ try{
+  const reg=await navigator.serviceWorker.getRegistration('/');
+  const sub=reg?await reg.pushManager.getSubscription():null;
+  if(!sub){message('pushStatus','No push notification subscription is active on this device.');return;}
+  await request('push-unsubscribe','POST',{code:state.ownerCode,endpoint:sub.endpoint});
+  await sub.unsubscribe();
+  await owner();
+  message('pushStatus','Free notifications disabled on this device.');
+ }catch(error){message('pushStatus','Could not disable notifications: '+error.message);}
+ finally{setBusy(button,PREVIEW_ONLY);}
+});
 $('startSms').addEventListener('click',async()=>{
  if(PREVIEW_ONLY||!state.ownerCode)return;
  if(!$('smsConsent').checked){message('smsStatus','Consent is required to receive parking alerts via WhatsApp.');return;}
@@ -174,6 +222,7 @@ async function init(){
  try{
   const status=await request('status');
   if(status.mode==='controlled-pilot'){
+   pushPublicKey=status.pushPublicKey||'';
    setMode(true);
    if(scanCode)$('scanForm').requestSubmit();
    if(state.ownerCode)await owner();

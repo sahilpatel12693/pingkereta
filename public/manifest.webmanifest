@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "PingKereta — Private Parking Alerts",
+  "short_name": "PingKereta",
+  "description": "Private browser parking alerts via vehicle QR stickers",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7faff",
+  "theme_color": "#2567d9",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

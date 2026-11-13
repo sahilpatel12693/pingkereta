@@ -2,7 +2,7 @@
   "name": "pingkereta-web",
   "version": "2.0.0-preview",
   "private": true,
-  "description": "Standalone PingKereta bilingual QR parking alerts, simulated demo and gated controlled pilot",
+  "description": "PingKereta free Web Push parking alerts with optional WhatsApp backup, controlled-pilot foundation",
   "engines": {
     "node": ">=22"
   },
@@ -11,10 +11,12 @@
     "check": "node --check netlify/functions/pingkereta.js && node --check public/app.js",
     "preflight": "node scripts/preflight.cjs",
     "smoke": "node scripts/smoke.mjs",
-    "invite": "node scripts/issue-pilot-invite.cjs"
+    "invite": "node scripts/issue-pilot-invite.cjs",
+    "vapid": "node scripts/generate-vapid.cjs"
   },
   "dependencies": {
     "@netlify/blobs": "^11.1.4",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "web-push": "^3.6.7"
   }
 }

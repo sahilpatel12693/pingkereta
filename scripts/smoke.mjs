@@ -12,6 +12,7 @@ const checks=[
  {path:'/test/',type:'text/html',expect:200,text:'SIMULATION ONLY'},
  {path:'/app.js',type:'javascript',expect:200,text:'PREVIEW_ONLY=true'},
  {path:'/api/health',type:'application/json',expect:200,text:'"scope":"route-only"'},
+ {path:'/api/pingkereta/status',type:'application/json',expect:200,text:'"mode":"preview"'},
  {path:'/api/pingkereta/public?code=000000000000000000000000',type:'application/json',expect:503,text:'disabled'}
 ];
 for(const check of checks){

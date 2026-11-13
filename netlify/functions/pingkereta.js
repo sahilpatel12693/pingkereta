@@ -111,6 +111,57 @@ async function sendSms(phone,plate,type){
  return response.ok?{sid:response.result.sid||null}:null;
 }
 
+// Free standards-based Web Push. Private subscription endpoints are accepted only from
+// known browser push services, to prevent arbitrary server-side requests/SSRF.
+function validPushSubscription(value){
+ if(!value||typeof value!=='object'||!value.keys||typeof value.keys!=='object')return false;
+ if(typeof value.endpoint!=='string'||value.endpoint.length>2048)return false;
+ if(!/^[A-Za-z0-9_-]{60,180}$/.test(value.keys.p256dh||'')||
+    !/^[A-Za-z0-9_-]{15,64}$/.test(value.keys.auth||''))return false;
+ try{
+  const url=new URL(value.endpoint);
+  const host=url.hostname.toLowerCase();
+  const trusted=host==='fcm.googleapis.com'||host==='fcm-xm.googleapis.com'||
+   host==='updates.push.services.mozilla.com'||host==='push.services.mozilla.com'||
+   host.endsWith('.push.apple.com')||host.endsWith('.notify.windows.com');
+  return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&trusted;
+ }catch{return false;}
+}
+async function sendPushToDevice(subscription,type){
+ try{
+  const webpush=require('web-push');
+  webpush.setVapidDetails(process.env.PINGKERETA_VAPID_SUBJECT,
+   process.env.PINGKERETA_VAPID_PUBLIC_KEY,process.env.PINGKERETA_VAPID_PRIVATE_KEY);
+  // No plate or phone number in lock-screen payload; owner dashboard has details.
+  const payload=JSON.stringify({
+   title:'PingKereta parking alert',
+   body:LABELS[type],
+   url:'/',
+   tag:'pingkereta-vehicle-alert'
+  });
+  const response=await webpush.sendNotification(
+   {endpoint:subscription.endpoint,keys:subscription.keys},payload,
+   {TTL:900,urgency:'high',timeout:7000}
+  );
+  return {accepted:response.statusCode>=200&&response.statusCode<300,expired:false};
+ }catch(err){
+  // Push endpoints are transient; remove expired subscriptions but preserve others.
+  return {accepted:false,expired:err.statusCode===404||err.statusCode===410};
+ }
+}
+function webPushConfigured(){
+ const env=process.env;
+ return /^[A-Za-z0-9_-]{60,180}$/.test(env.PINGKERETA_VAPID_PUBLIC_KEY||'')&&
+  /^[A-Za-z0-9_-]{30,100}$/.test(env.PINGKERETA_VAPID_PRIVATE_KEY||'')&&
+  /^(mailto:[^\s@]+@[^\s@]+|https:\/\/[^\s]+)$/.test(env.PINGKERETA_VAPID_SUBJECT||'');
+}
+function whatsAppConfigured(){
+ const env=process.env;
+ return !!(env.PINGKERETA_TWILIO_ACCOUNT_SID&&env.PINGKERETA_TWILIO_AUTH_TOKEN&&
+  env.PINGKERETA_TWILIO_VERIFY_SERVICE_SID&&env.PINGKERETA_TWILIO_WHATSAPP_FROM&&
+  /^HX[a-f0-9]{32}$/i.test(env.PINGKERETA_WHATSAPP_CONTENT_SID||'')&&
+  env.PINGKERETA_TWILIO_STATUS_URL==='https://pingkereta.com/api/pingkereta/twilio-status');
+}
 async function handler(event){
  const headers={...baseHeaders};
  const method=event.httpMethod||'GET';
@@ -178,7 +229,7 @@ async function handler(event){
   const existing=await read(s,'plate/'+hash(plate));
   if(existing)return json(409,{error:'This vehicle is already registered. Contact the pilot operator for a transfer.'},headers);
   const code=random(12),secret=random(32),linkToken=random(24);
-  const owner={code,plate,secretHash:hash(secret),linkHash:hash(linkToken),chatId:null,phoneEncrypted:null,smsVerified:false,smsConsent:false,whatsappConsent:false,whatsappVerified:false,created:Date.now(),alerts:[]};
+  const owner={code,plate,secretHash:hash(secret),linkHash:hash(linkToken),chatId:null,phoneEncrypted:null,smsVerified:false,smsConsent:false,whatsappConsent:false,whatsappVerified:false,pushSubscriptions:[],created:Date.now(),alerts:[]};
   await save(s,'vehicle/'+code,owner);
   await save(s,'plate/'+hash(plate),{code,created:Date.now()});
   await save(s,'link/'+hash(linkToken),{code,expires:Date.now()+86400000});
@@ -206,13 +257,36 @@ async function handler(event){
   for(const alert of owner.alerts||[]){if(alert.providerSid)await s.delete('delivery/'+alert.providerSid);}
   return json(200,{ok:true,message:'Your vehicle sticker has been deactivated and the owner record deleted.'},{...headers,'Set-Cookie':'pk_owner=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'});
  }
+ if(path==='push-subscribe'&&method==='POST'){
+  if(!ownerAuthenticated(event,owner,code))return json(401,{error:'Owner authentication required'},headers);
+  if(!webPushConfigured())return json(503,{error:'Web Push is not configured for this pilot'},headers);
+  if(body.consent!==true||!validPushSubscription(body.subscription))return json(400,{error:'Valid browser permission and push subscription required'},headers);
+  if(!await rateLimit(s,'push-setup:'+code,3600000,12))return json(429,{error:'Too many device changes'},headers);
+  const input=body.subscription,devices=Array.isArray(owner.pushSubscriptions)?owner.pushSubscriptions:[];
+  const current=devices.filter(item=>item.endpoint!==input.endpoint).slice(-2);
+  owner.pushSubscriptions=[...current,{
+   endpoint:input.endpoint,keys:{auth:input.keys.auth,p256dh:input.keys.p256dh},
+   created:Date.now()
+  }];
+  await save(s,'vehicle/'+code,owner);
+  return json(200,{ok:true,enabled:true,devices:owner.pushSubscriptions.length},headers);
+ }
+ if(path==='push-unsubscribe'&&method==='POST'){
+  if(!ownerAuthenticated(event,owner,code))return json(401,{error:'Owner authentication required'},headers);
+  if(!await rateLimit(s,'push-setup:'+code,3600000,12))return json(429,{error:'Too many device changes'},headers);
+  const endpoint=body.endpoint;
+  if(typeof endpoint!=='string'||endpoint.length>2048)return json(400,{error:'Valid subscription endpoint required'},headers);
+  owner.pushSubscriptions=(owner.pushSubscriptions||[]).filter(item=>item.endpoint!==endpoint);
+  await save(s,'vehicle/'+code,owner);
+  return json(200,{ok:true,devices:owner.pushSubscriptions.length},headers);
+ }
  if(path==='sms-start'&&method==='POST'){
   if(!ownerAuthenticated(event,owner,code))return json(401,{error:'Owner authentication required'},headers);
   if(!await rateLimit(s,'verify:'+code,3600000,3))return json(429,{error:'Too many verification attempts'},headers);
   const phone=String(body.phone||'').trim();
   if(!/^\+60[1-9]\d{7,9}$/.test(phone)||body.consent!==true)return json(400,{error:'Enter a Malaysian phone number and consent to parking SMS alerts'},headers);
   const channel=body.channel==='sms'?'sms':'whatsapp';
-  if(channel==='whatsapp'&&(!process.env.PINGKERETA_WHATSAPP_CONTENT_SID||!process.env.PINGKERETA_TWILIO_WHATSAPP_FROM||!process.env.PINGKERETA_TWILIO_STATUS_URL))return json(503,{error:'WhatsApp provider and delivery callbacks are not configured yet'},headers);
+  if(channel==='whatsapp'&&!whatsAppConfigured())return json(503,{error:'WhatsApp provider and delivery callbacks are not configured yet'},headers);
   const result=await startSms(phone,channel);
   if(!result.ok)return json(502,{error:'Could not send verification SMS'},headers);
   await save(s,'pending-phone/'+code,{encrypted:encryptPhone(phone),channel,expires:Date.now()+600000});
@@ -243,7 +317,21 @@ async function handler(event){
   if(!await rateLimit(s,'alert-ip:'+ip,600000,8)||!await rateLimit(s,'alert-vehicle:'+code,120000,3))return json(429,{error:'Alert limit reached. Please wait.'},headers);
   const id=random(8),entry={id,type:body.type,created:Date.now(),delivered:false};
   let delivered=false,channel='inbox',providerSid=null;
-  if(owner.whatsappVerified&&owner.whatsappConsent&&owner.phoneEncrypted){
+  // Free browser push is the first choice. WhatsApp is used only when no
+  // registered push endpoint accepts the event, and the owner opted in.
+  const devices=Array.isArray(owner.pushSubscriptions)?owner.pushSubscriptions:[];
+  let activeDevices=devices,acceptedPush=0;
+  if(devices.length){
+   activeDevices=[];
+   for(const sub of devices){
+    const result=await sendPushToDevice(sub,body.type);
+    if(result.accepted)acceptedPush++;
+    if(!result.expired)activeDevices.push(sub);
+   }
+   owner.pushSubscriptions=activeDevices;
+   if(acceptedPush){delivered=true;channel='web-push';}
+  }
+  if(!delivered&&owner.whatsappVerified&&owner.whatsappConsent&&owner.phoneEncrypted){
    const result=await sendWhatsApp(decryptPhone(owner.phoneEncrypted),owner.plate,body.type);
    delivered=!!result;providerSid=result?.sid||null;
    if(delivered)channel='whatsapp';
@@ -254,15 +342,15 @@ async function handler(event){
    if(delivered)channel='sms';
   }
   if(!delivered&&owner.chatId){delivered=await telegram(owner.chatId,'PingKereta alert for '+owner.plate+'\n'+LABELS[body.type]);if(delivered)channel='telegram';}
-  entry.delivered=false;entry.submitted=delivered;entry.channel=channel;entry.deliveryStatus=delivered?'submitted':'not_sent';entry.providerSid=providerSid;
+  entry.delivered=false;entry.submitted=delivered;entry.channel=channel;entry.deliveryStatus=delivered?(channel==='web-push'?'push_accepted':'submitted'):'not_sent';entry.providerSid=providerSid;
   owner.alerts=[entry,...(owner.alerts||[])].slice(0,40);
   await save(s,'vehicle/'+code,owner);
   if(providerSid)await save(s,'delivery/'+providerSid,{code,id,created:Date.now()});
-  return json(200,{ok:true,submitted:delivered,delivered:false,message:delivered?'Alert submitted to notification provider. Delivery is not yet confirmed.':'Alert recorded, but instant delivery is not connected.'},headers);
+  return json(200,{ok:true,submitted:delivered,delivered:false,message:delivered?(channel==='web-push'?'Browser push accepted. The owner may still have notifications muted or delayed.':'Alert submitted to notification provider. Delivery is not yet confirmed.'):'Alert recorded, but instant delivery is not connected.'},headers);
  }
  if(path==='owner'&&method==='GET'){
   if(!ownerAuthenticated(event,owner,code))return json(401,{error:'Owner authentication required.'},headers);
-  return json(200,{code,plate:owner.plate,connected:!!owner.chatId,smsVerified:!!owner.smsVerified,whatsappVerified:!!owner.whatsappVerified,alerts:(owner.alerts||[]).map(({providerSid,...alert})=>alert),created:owner.created},headers);
+  return json(200,{code,plate:owner.plate,connected:!!owner.chatId,pushEnabled:(owner.pushSubscriptions||[]).length>0,pushDevices:(owner.pushSubscriptions||[]).length,smsVerified:!!owner.smsVerified,whatsappVerified:!!owner.whatsappVerified,alerts:(owner.alerts||[]).map(({providerSid,...alert})=>alert),created:owner.created},headers);
  }
  return json(404,{error:'Not found'},headers);
 }
@@ -272,11 +360,7 @@ function liveConfigurationComplete(){
  return !!(
   env.PINGKERETA_PILOT_INVITE_SECRET&&env.PINGKERETA_PILOT_INVITE_SECRET.length>=32&&
   /^[a-f0-9]{64}$/i.test(env.PINGKERETA_DATA_ENCRYPTION_KEY||'')&&
-  env.PINGKERETA_TWILIO_ACCOUNT_SID&&env.PINGKERETA_TWILIO_AUTH_TOKEN&&
-  env.PINGKERETA_TWILIO_VERIFY_SERVICE_SID&&
-  env.PINGKERETA_TWILIO_WHATSAPP_FROM&&
-  /^HX[a-f0-9]{32}$/i.test(env.PINGKERETA_WHATSAPP_CONTENT_SID||'')&&
-  env.PINGKERETA_TWILIO_STATUS_URL==='https://pingkereta.com/api/pingkereta/twilio-status'
+  webPushConfigured()
  );
 }
 exports.handler=async e=>{
@@ -285,7 +369,7 @@ exports.handler=async e=>{
  if(requestPath==='status'){
   if((e.httpMethod||'GET')!=='GET')return json(405,{error:'Method not allowed'},baseHeaders);
   const enabled=process.env.PINGKERETA_ENABLE_LIVE==='true'&&process.env.PINGKERETA_RELEASE_APPROVED==='true'&&liveConfigurationComplete();
-  return json(200,{mode:enabled?'controlled-pilot':'preview',registration:enabled?'invitation-only':'disabled',notifications:enabled?'provider-configured-not-verified':'disabled',product:'PingKereta'},baseHeaders);
+  return json(200,{mode:enabled?'controlled-pilot':'preview',registration:enabled?'invitation-only':'disabled',notifications:enabled?'web-push-first':'disabled',pushPublicKey:enabled?process.env.PINGKERETA_VAPID_PUBLIC_KEY:null,whatsappOptional:enabled&&whatsAppConfigured(),product:'PingKereta'},baseHeaders);
  }
  if(process.env.PINGKERETA_ENABLE_LIVE!=='true'||process.env.PINGKERETA_RELEASE_APPROVED!=='true')
   return json(503,{error:'PingKereta preview is available. Registrations and alerts are disabled until security and messaging setup is complete.'},baseHeaders);
